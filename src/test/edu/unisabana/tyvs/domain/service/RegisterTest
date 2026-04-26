@@ -1,0 +1,248 @@
+package edu.unisabana.tyvs.domain.service;
+
+import edu.unisabana.tyvs.domain.model.Gender;
+import edu.unisabana.tyvs.domain.model.Person;
+import edu.unisabana.tyvs.domain.model.RegisterResult;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
+/**
+ * Pruebas unitarias para {@link Registry}.
+ *
+ * Estrategias aplicadas:
+ *   - TDD (Red -> Green -> Refactor): 5 ciclos.
+ *   - Patron AAA (Arrange - Act - Assert) en cada test.
+ *   - Clases de equivalencia y valores limite.
+ *   - BDD (Given - When - Then) en cada Javadoc.
+ *
+ * Matriz de clases de equivalencia:
+ * | Clase             | Representante  | Resultado    |
+ * |-------------------|----------------|--------------|
+ * | Persona null      | null           | INVALID      |
+ * | ID = 0            | id=0           | INVALID      |
+ * | ID negativo       | id=-5          | INVALID      |
+ * | Persona muerta    | alive=false    | DEAD         |
+ * | Edad negativa     | age=-1         | INVALID_AGE  |
+ * | Edad > 120        | age=121        | INVALID_AGE  |
+ * | Menor (lim sup)   | age=17         | UNDERAGE     |
+ * | Adulto (lim inf)  | age=18         | VALID        |
+ * | Adulto (lim sup)  | age=120        | VALID        |
+ * | Duplicado         | mismo id x2    | DUPLICATED   |
+ * | Camino feliz      | age=30         | VALID        |
+ */
+public class RegistryTest {
+
+    private Registry registry;
+
+    @Before
+    public void setUp() {
+        registry = new Registry();
+    }
+
+    // ═══════════════════════════════════════════════════
+    // TDD Ciclo 1 - Camino feliz
+    // ═══════════════════════════════════════════════════
+
+    /**
+     * Given: persona viva, 30 años, id valido.
+     * When:  se intenta registrar.
+     * Then:  resultado VALID.
+     */
+    @Test
+    public void shouldRegisterValidPerson() {
+        // Arrange
+        Person person = new Person("Ana", 1, 30, Gender.FEMALE, true);
+        // Act
+        RegisterResult result = registry.registerVoter(person);
+        // Assert
+        Assert.assertEquals(RegisterResult.VALID, result);
+    }
+
+    // ═══════════════════════════════════════════════════
+    // TDD Ciclo 2 - Persona fallecida
+    // ═══════════════════════════════════════════════════
+
+    /**
+     * Given: persona con alive = false.
+     * When:  se intenta registrar.
+     * Then:  resultado DEAD.
+     */
+    @Test
+    public void shouldRejectDeadPerson() {
+        // Arrange
+        Person dead = new Person("Carlos", 2, 40, Gender.MALE, false);
+        // Act
+        RegisterResult result = registry.registerVoter(dead);
+        // Assert
+        Assert.assertEquals(RegisterResult.DEAD, result);
+    }
+
+    // ═══════════════════════════════════════════════════
+    // TDD Ciclo 3 - Validaciones defensivas
+    // ═══════════════════════════════════════════════════
+
+    /**
+     * Given: persona null.
+     * When:  se intenta registrar.
+     * Then:  resultado INVALID.
+     */
+    @Test
+    public void shouldReturnInvalidWhenPersonIsNull() {
+        // Arrange
+        Person person = null;
+        // Act
+        RegisterResult result = registry.registerVoter(person);
+        // Assert
+        Assert.assertEquals(RegisterResult.INVALID, result);
+    }
+
+    /**
+     * Given: persona con id = 0 (frontera inferior invalida).
+     * When:  se intenta registrar.
+     * Then:  resultado INVALID.
+     */
+    @Test
+    public void shouldRejectWhenIdIsZero() {
+        // Arrange
+        Person person = new Person("Luis", 0, 25, Gender.MALE, true);
+        // Act
+        RegisterResult result = registry.registerVoter(person);
+        // Assert
+        Assert.assertEquals(RegisterResult.INVALID, result);
+    }
+
+    /**
+     * Given: persona con id negativo (-5).
+     * When:  se intenta registrar.
+     * Then:  resultado INVALID.
+     */
+    @Test
+    public void shouldRejectWhenIdIsNegative() {
+        // Arrange
+        Person person = new Person("Luis", -5, 25, Gender.MALE, true);
+        // Act
+        RegisterResult result = registry.registerVoter(person);
+        // Assert
+        Assert.assertEquals(RegisterResult.INVALID, result);
+    }
+
+    // ═══════════════════════════════════════════════════
+    // TDD Ciclo 4 - Valores limite de edad
+    // ═══════════════════════════════════════════════════
+
+    /**
+     * Given: persona viva con 17 años (limite: menor de edad).
+     * When:  se intenta registrar.
+     * Then:  resultado UNDERAGE.
+     */
+    @Test
+    public void shouldRejectUnderageAt17() {
+        // Arrange
+        Person underage = new Person("Sofia", 3, 17, Gender.FEMALE, true);
+        // Act
+        RegisterResult result = registry.registerVoter(underage);
+        // Assert
+        Assert.assertEquals(RegisterResult.UNDERAGE, result);
+    }
+
+    /**
+     * Given: persona viva con 18 años (limite inferior valido).
+     * When:  se intenta registrar.
+     * Then:  resultado VALID.
+     */
+    @Test
+    public void shouldAcceptAdultAt18() {
+        // Arrange
+        Person adult = new Person("Maria", 4, 18, Gender.FEMALE, true);
+        // Act
+        RegisterResult result = registry.registerVoter(adult);
+        // Assert
+        Assert.assertEquals(RegisterResult.VALID, result);
+    }
+
+    /**
+     * Given: persona viva con 120 años (limite superior valido).
+     * When:  se intenta registrar.
+     * Then:  resultado VALID.
+     */
+    @Test
+    public void shouldAcceptMaxAge120() {
+        // Arrange
+        Person elder = new Person("Don Ramon", 5, 120, Gender.MALE, true);
+        // Act
+        RegisterResult result = registry.registerVoter(elder);
+        // Assert
+        Assert.assertEquals(RegisterResult.VALID, result);
+    }
+
+    /**
+     * Given: persona viva con 121 años (limite superior invalido).
+     * When:  se intenta registrar.
+     * Then:  resultado INVALID_AGE.
+     */
+    @Test
+    public void shouldRejectInvalidAgeOver120() {
+        // Arrange
+        Person tooOld = new Person("Metusalen", 6, 121, Gender.MALE, true);
+        // Act
+        RegisterResult result = registry.registerVoter(tooOld);
+        // Assert
+        Assert.assertEquals(RegisterResult.INVALID_AGE, result);
+    }
+
+    /**
+     * Given: persona viva con edad -1.
+     * When:  se intenta registrar.
+     * Then:  resultado INVALID_AGE.
+     */
+    @Test
+    public void shouldRejectNegativeAge() {
+        // Arrange
+        Person invalid = new Person("Ghost", 7, -1, Gender.UNIDENTIFIED, true);
+        // Act
+        RegisterResult result = registry.registerVoter(invalid);
+        // Assert
+        Assert.assertEquals(RegisterResult.INVALID_AGE, result);
+    }
+
+    // ═══════════════════════════════════════════════════
+    // TDD Ciclo 5 - Duplicados
+    // ═══════════════════════════════════════════════════
+
+    /**
+     * Given: dos personas con el mismo ID (777), ambas validas.
+     * When:  se registran una tras otra.
+     * Then:  primera VALID, segunda DUPLICATED.
+     */
+    @Test
+    public void shouldReturnDuplicatedWhenSameIdRegisteredTwice() {
+        // Arrange
+        Person first  = new Person("Pedro",    777, 25, Gender.MALE, true);
+        Person second = new Person("PedroDos", 777, 35, Gender.MALE, true);
+        // Act
+        RegisterResult result1 = registry.registerVoter(first);
+        RegisterResult result2 = registry.registerVoter(second);
+        // Assert
+        Assert.assertEquals(RegisterResult.VALID,      result1);
+        Assert.assertEquals(RegisterResult.DUPLICATED, result2);
+    }
+
+    /**
+     * Given: dos personas con IDs diferentes, ambas validas.
+     * When:  se registran.
+     * Then:  ambas retornan VALID.
+     */
+    @Test
+    public void shouldRegisterTwoDifferentValidPersons() {
+        // Arrange
+        Person p1 = new Person("Ana",   10, 28, Gender.FEMALE, true);
+        Person p2 = new Person("Pedro", 20, 32, Gender.MALE,   true);
+        // Act
+        RegisterResult r1 = registry.registerVoter(p1);
+        RegisterResult r2 = registry.registerVoter(p2);
+        // Assert
+        Assert.assertEquals(RegisterResult.VALID, r1);
+        Assert.assertEquals(RegisterResult.VALID, r2);
+    }
+}
