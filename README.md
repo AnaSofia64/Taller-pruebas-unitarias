@@ -4,7 +4,7 @@
 **Universidad de La Sabana - Maestria en Ingenieria de Software**
 
 ## Integrantes
-*Juan Camilo Silva y Ana Sofia Rodriguez Ferro*
+*Ana Sofia Rodriguez, Juan Camilo Silva y Santiago Barrera*
 
 ## Estructura
 src/
